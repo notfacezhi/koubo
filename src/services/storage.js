@@ -1,6 +1,7 @@
 const STORAGE_KEYS = {
   PRACTICE_LIST: 'koubo_practice_list',
   API_KEY: 'koubo_api_key',
+  TIMER_DATA: 'koubo_timer_data',
 };
 
 export const storage = {
@@ -50,5 +51,21 @@ export const storage = {
 
   setApiKey(key) {
     localStorage.setItem(STORAGE_KEYS.API_KEY, key);
+  },
+
+  // 计时数据管理
+  getTimerData(practiceId) {
+    const data = localStorage.getItem(STORAGE_KEYS.TIMER_DATA);
+    if (!data) return null;
+    const parsed = JSON.parse(data);
+    return parsed[practiceId] || null;
+  },
+
+  saveTimerData(practiceId, timerData) {
+    const data = localStorage.getItem(STORAGE_KEYS.TIMER_DATA) || '{}';
+    const parsed = JSON.parse(data);
+    parsed[practiceId] = timerData;
+    localStorage.setItem(STORAGE_KEYS.TIMER_DATA, JSON.stringify(parsed));
+    return timerData;
   },
 };
