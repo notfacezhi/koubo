@@ -214,6 +214,31 @@ export function Practice() {
     stopTimer();
   };
 
+  const handleReset = () => {
+    pauseTimer();
+    setTimerState('idle');
+    setElapsedTime(0);
+    setDisplayTime('00:00');
+    setStageTimes({
+      original: { current: 0, total: 0, active: false },
+      outline: { current: 0, total: 0, active: false },
+      hint: { current: 0, total: 0, active: false },
+      free: { current: 0, total: 0, active: false },
+    });
+    // 清除保存的计时数据
+    storage.saveTimerData(id, {
+      startTime: null,
+      endTime: Date.now(),
+      totalSeconds: 0,
+      stages: {
+        original: { current: 0, total: 0, active: false },
+        outline: { current: 0, total: 0, active: false },
+        hint: { current: 0, total: 0, active: false },
+        free: { current: 0, total: 0, active: false },
+      },
+    });
+  };
+
   const renderContent = () => {
     switch (mode) {
       case 'original':
@@ -356,12 +381,20 @@ export function Practice() {
 
           <div className="flex items-center gap-4">
             {timerState !== 'finished' && (
-              <button
-                onClick={handleEnd}
-                className="px-4 py-1.5 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white transition-colors"
-              >
-                结束
-              </button>
+              <>
+                <button
+                  onClick={handleReset}
+                  className="px-4 py-1.5 rounded-lg text-sm bg-gray-500 hover:bg-gray-600 text-white transition-colors"
+                >
+                  重置
+                </button>
+                <button
+                  onClick={handleEnd}
+                  className="px-4 py-1.5 rounded-lg text-sm bg-red-500 hover:bg-red-600 text-white transition-colors"
+                >
+                  结束
+                </button>
+              </>
             )}
 
             <Link to={`/stats/${id}`} className="text-primary hover:text-primary/80 text-sm font-medium">
