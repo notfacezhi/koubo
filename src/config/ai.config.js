@@ -1,7 +1,7 @@
 export const AI_CONFIG = {
   provider: 'qwen',
   endpoint: 'https://dashscope.aliyuncs.com/compatible-mode/v1/chat/completions',
-  model: 'qwen-turbo',
+  model: 'qwen-plus',
 };
 
 export const AI_PROMPT = `你是一个口播训练助手。请将用户输入的文稿拆解为以下结构：
