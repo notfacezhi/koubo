@@ -20,6 +20,7 @@ export const aiService = {
           { role: 'system', content: AI_PROMPT },
           { role: 'user', content: text },
         ],
+        response_format: { type: 'json_object' },
       }),
     });
 

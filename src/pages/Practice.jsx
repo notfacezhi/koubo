@@ -11,10 +11,10 @@ const MODES = [
 ];
 
 const MODE_COLORS = {
-  original: '#8B5CF6',
-  outline: '#10B981',
-  hint: '#F59E0B',
-  free: '#3B82F6',
+  original: '#A78BFA',  // 温和紫色
+  outline: '#34D399',   // 温和绿色
+  hint: '#FBBF24',      // 温和黄色
+  free: '#60A5FA',      // 温和蓝色
 };
 
 export function Practice() {
@@ -47,15 +47,23 @@ export function Practice() {
       setPractice(item);
       // 加载已有的计时数据
       const timerData = storage.getTimerData(id);
-      if (timerData && timerData.endTime) {
+      if (timerData) {
         setElapsedTime(timerData.totalSeconds || 0);
-        setTimerState('finished');
-        setStageTimes(timerData.stages || {
-          original: { current: 0, total: 0, active: false },
-          outline: { current: 0, total: 0, active: false },
-          hint: { current: 0, total: 0, active: false },
-          free: { current: 0, total: 0, active: false },
-        });
+        if (timerData.endTime) {
+          setTimerState('finished');
+        }
+        // 恢复各阶段的累积时间
+        if (timerData.stages) {
+          const restoredStages = {};
+          Object.keys(timerData.stages).forEach(key => {
+            restoredStages[key] = {
+              current: timerData.stages[key].current || 0,
+              total: timerData.stages[key].total || 0,
+              active: timerData.stages[key].active || false,
+            };
+          });
+          setStageTimes(restoredStages);
+        }
       }
     } else {
       navigate('/');
@@ -92,9 +100,10 @@ export function Practice() {
         const newStages = { ...prev };
         Object.keys(newStages).forEach(key => {
           if (newStages[key].active) {
+            const elapsedInStage = Math.floor((now - stageStartTimeRef.current) / 1000);
             newStages[key] = {
               ...newStages[key],
-              current: Math.floor((now - stageStartTimeRef.current) / 1000),
+              current: newStages[key].current + 1,
             };
           }
         });
@@ -110,8 +119,17 @@ export function Practice() {
       clearInterval(timerRef.current);
       timerRef.current = null;
       setTimerState('paused');
+      
+      // 暂停时保存当前数据
+      const timerData = {
+        startTime: startTimeRef.current || Date.now(),
+        endTime: null,
+        totalSeconds: elapsedTime,
+        stages: stageTimes,
+      };
+      storage.saveTimerData(id, timerData);
     }
-  }, []);
+  }, [elapsedTime, stageTimes, id]);
 
   const resumeTimer = useCallback(() => {
     const now = Date.now();
@@ -124,12 +142,13 @@ export function Practice() {
     pauseTimer();
     setTimerState('finished');
 
-    // 保存计时数据
-    const finalStageTimes = { ...stageTimes };
-    Object.keys(finalStageTimes).forEach(key => {
+    // 保存计时数据（保留current值，不清零）
+    const finalStageTimes = {};
+    Object.keys(stageTimes).forEach(key => {
       finalStageTimes[key] = {
-        current: 0,
-        total: finalStageTimes[key].total + finalStageTimes[key].current,
+        current: stageTimes[key].current,
+        total: stageTimes[key].total,
+        totalTime: stageTimes[key].total + stageTimes[key].current,
         active: false,
       };
     });
@@ -142,42 +161,50 @@ export function Practice() {
     };
 
     storage.saveTimerData(id, timerData);
-  }, [stageTimes, elapsedTime, id]);
+  }, [stageTimes, elapsedTime, id, pauseTimer]);
 
   // 切换模式时自动处理计时时
   const handleModeChange = useCallback((newMode) => {
-    if (timerState === 'finished') return; // 已结束后不处理
-
     setMode(newMode);
 
-    // 停止当前阶段
-    if (stageTimes[mode].active) {
-      setStageTimes(prev => {
-        const newStages = { ...prev };
+    // 如果已结束，只切换显示模式，不更新计时数据
+    if (timerState === 'finished') {
+      return;
+    }
+
+    // 一次性更新：停止当前阶段 + 开始新阶段
+    setStageTimes(prev => {
+      const newStages = { ...prev };
+      
+      // 停止当前阶段（不重置current，保留累积时间）
+      if (prev[mode].active) {
         newStages[mode] = {
           ...newStages[mode],
           active: false,
-          total: newStages[mode].total + newStages[mode].current,
         };
-        return newStages;
-      });
-    }
+      }
 
-    // 开始新阶段
-    if (timerState === 'running') {
-      setStageTimes(prev => {
-        const newStages = { ...prev };
+      // 如果计时器在运行，激活新阶段
+      if (timerState === 'running') {
         newStages[newMode] = {
           ...newStages[newMode],
           active: true,
-          current: 0,
-          total: newStages[newMode].total,
         };
         stageStartTimeRef.current = Date.now();
-        return newStages;
-      });
-    }
-  }, [mode, timerState, stageTimes]);
+      }
+      
+      // 切换模式时保存数据
+      const timerData = {
+        startTime: startTimeRef.current || Date.now(),
+        endTime: null,
+        totalSeconds: elapsedTime,
+        stages: newStages,
+      };
+      storage.saveTimerData(id, timerData);
+      
+      return newStages;
+    });
+  }, [mode, timerState, elapsedTime, id]);
 
   // 半提示模式：每句只显示首字
   const getHintText = (text) => {
@@ -192,14 +219,18 @@ export function Practice() {
   if (!practice) return null;
 
   const handleStart = () => {
+    // 如果是finished状态，说明是继续练习，需要保留之前的累积时间
+    if (timerState === 'finished') {
+      setTimerState('idle');
+    }
     startTimer();
-    // 重置所有current为0，但保留total累积值
-    setStageTimes({
-      original: { current: 0, total: stageTimes.original.total, active: mode === 'original' },
-      outline: { current: 0, total: stageTimes.outline.total, active: mode === 'outline' },
-      hint: { current: 0, total: stageTimes.hint.total, active: mode === 'hint' },
-      free: { current: 0, total: stageTimes.free.total, active: mode === 'free' },
-    });
+    // 只更新active状态，不重置current
+    setStageTimes(prev => ({
+      original: { ...prev.original, active: mode === 'original' },
+      outline: { ...prev.outline, active: mode === 'outline' },
+      hint: { ...prev.hint, active: mode === 'hint' },
+      free: { ...prev.free, active: mode === 'free' },
+    }));
   };
 
   const handlePause = () => {
@@ -407,12 +438,12 @@ export function Practice() {
       {/* Tab 切换 */}
       <div className="bg-white border-b border-gray-100">
         <div className="max-w-4xl mx-auto px-4">
-          <div className="flex gap-1">
+          <div className="grid grid-cols-4 gap-4">
             {MODES.map((m) => (
               <button
                 key={m.key}
                 onClick={() => handleModeChange(m.key)}
-                className={`px-4 py-3 text-sm font-medium transition-colors ${
+                className={`py-3 text-sm font-medium transition-colors text-center ${
                   mode === m.key
                     ? 'text-primary border-b-2 border-primary'
                     : 'text-gray-400 hover:text-gray-600'
@@ -439,31 +470,25 @@ export function Practice() {
 
             return (
               <div key={m.key} className="flex flex-col items-center gap-2">
-                <div className="flex-1 text-sm text-gray-500 whitespace-nowrap">
-                  {m.label}
-                </div>
-                <div className="flex-1 flex-1">
-                  <div className="h-2 bg-gray-100 rounded-full overflow-hidden relative">
-                    {/* 进度条背景 */}
+                <div className="w-full">
+                  <div 
+                    className="h-2 rounded-full overflow-hidden relative transition-all duration-300"
+                    style={{
+                      backgroundColor: isActive ? MODE_COLORS[m.key] + '30' : '#F3F4F6',
+                    }}
+                  >
+                    {/* 进度条 */}
                     <div
-                      className={`h-full rounded-full transition-all duration-300 ${
-                        isActive ? 'opacity-100' : 'opacity-30'
-                      }`}
+                      className="h-full rounded-full transition-all duration-300"
                       style={{
                         width: `${barWidth}%`,
                         backgroundColor: MODE_COLORS[m.key],
                       }}
                     ></div>
-                    {/* 当前指示器 */}
-                    {isActive && (
-                      <div
-                        className="absolute left-0 top-0 h-full w-0.5 bg-gray-400 rounded-full animate-pulse"
-                      ></div>
-                    )}
                   </div>
                 </div>
-                <div className="w-20 text-right">
-                  <p className="text-sm font-medium">{formatTime(currentTime)}</p>
+                <div className="w-full text-center">
+                  <p className="text-sm font-medium">{formatTime(totalTime + currentTime)}</p>
                 </div>
               </div>
             );

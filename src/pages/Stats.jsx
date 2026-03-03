@@ -98,8 +98,8 @@ ${stagesData.map(s => `${s.mode}(${s.label}): ${s.seconds}秒 (${s.percentage}%)
     } catch (err) {
       console.error('分析失败:', err);
       setAnalysis({
-        summary: '分析功能暂时不可用，请检查API配置',
-        insights: ['请先配置API Key'],
+        summary: `分析失败: ${err.message}`,
+        insights: ['请查看控制台了解详细错误信息'],
         suggestions: ['配置API Key后可使用此功能'],
       });
     } finally {
@@ -111,7 +111,7 @@ ${stagesData.map(s => `${s.mode}(${s.label}): ${s.seconds}秒 (${s.percentage}%)
     return (
       <div className="min-h-screen bg-gray-50 px-4 py-8">
         <div className="max-w-2xl mx-auto">
-          <Link to="/" className="inline-flex items-center text-gray-400 hover:text-gray-600">
+          <Link to={`/practice/${id}`} className="inline-flex items-center text-gray-400 hover:text-gray-600">
             <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
             </svg>
@@ -129,7 +129,7 @@ ${stagesData.map(s => `${s.mode}(${s.label}): ${s.seconds}秒 (${s.percentage}%)
     <div className="min-h-screen bg-gray-50 px-4 py-8">
       {/* 返回按钮 */}
       <div className="max-w-4xl mx-auto mb-6">
-        <Link to="/" className="inline-flex items-center text-gray-400 hover:text-gray-600">
+        <Link to={`/practice/${id}`} className="inline-flex items-center text-gray-400 hover:text-gray-600">
           <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
           </svg>
