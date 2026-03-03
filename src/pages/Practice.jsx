@@ -193,11 +193,12 @@ export function Practice() {
 
   const handleStart = () => {
     startTimer();
+    // 重置所有current为0，但保留total累积值
     setStageTimes({
-      original: { current: 0, total: 0, active: timerState === 'running' && mode === 'original' },
-      outline: { current: 0, total: 0, active: timerState === 'running' && mode === 'outline' },
-      hint: { current: 0, total: 0, active: timerState === 'running' && mode === 'hint' },
-      free: { current: 0, total: 0, active: timerState === 'running' && mode === 'free' },
+      original: { current: 0, total: stageTimes.original.total, active: mode === 'original' },
+      outline: { current: 0, total: stageTimes.outline.total, active: mode === 'outline' },
+      hint: { current: 0, total: stageTimes.hint.total, active: mode === 'hint' },
+      free: { current: 0, total: stageTimes.free.total, active: mode === 'free' },
     });
   };
 
