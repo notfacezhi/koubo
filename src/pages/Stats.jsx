@@ -45,8 +45,8 @@ export function Stats() {
   };
 
   const calculateTotalTime = () => {
-    if (!timerData) return 0;
-    return Object.values(timerData.stages).reduce((sum, stage) => sum + stage.totalTime, 0);
+    if (!timerData || !timerData.stages) return 0;
+    return Object.values(timerData.stages || {}).reduce((sum, stage) => sum + (stage.totalTime || 0), 0);
   };
 
   const maxTime = calculateTotalTime();
